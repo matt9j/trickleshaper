@@ -15,24 +15,28 @@ tc -g -s filter show dev $IFACE
 echo "-------------------Add root----------------"
 
 tc qdisc add dev $IFACE root handle 1: tbf rate 500kbit burst 100kbit latency 10ms
+# The latency parameter does not matter since we overwrite the TBF's
+# internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
+# more information.
 
 echo "------------------Add parent qfq-----------"
 
 tc qdisc add dev $IFACE parent 1:1 handle 2: qfq
 
 echo "-------------------Add shapers per ip----------------"
-tc class add dev $IFACE parent 2: classid 2:1 qfq weight 10
-tc qdisc add dev $IFACE parent 2:1 handle 40: fq_codel target 10ms
-
-tc class add dev $IFACE parent 2: classid 2:2 qfq weight 10
-tc qdisc add dev $IFACE parent 2:2 handle 50: fq_codel target 10ms
+for i in `seq 1 256`
+do
+classid=2:$(printf %x $i)
+tc class add dev $IFACE parent 2: classid $classid qfq weight 10
+tc qdisc add dev $IFACE parent $classid fq_codel target 10ms
+done
 
 echo "-------------------Add filter--------------"
 #tc filter add dev $IFACE parent 1: matchall flowid 2:
 #tc filter add dev $IFACE parent 2: matchall flowid 2:1
 
 tc filter add dev $IFACE parent 2: protocol all prio 1 handle 0x1337 \
-   flow hash keys nfct-src divisor 2 baseclass 2:1
+   flow map key nfct-src and 0xff divisor 256 baseclass 2:1
 #This is where we maybe want to change to destIP
 
 echo "-------------------Print end state----------------"
@@ -62,22 +66,23 @@ tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 100kbit latency 10m
 # more information.
 tc qdisc add dev $IFB parent a1: handle a2: qfq
 
-tc class add dev $IFB parent a2: classid a2:1 qfq weight 10
-tc qdisc add dev $IFB parent a2:1 handle a40: fq_codel target 10ms
+for i in `seq 1 256`
+do
+classid=a2:$(printf %x $i)
+tc class add dev $IFB parent a2: classid $classid qfq weight 10
+tc qdisc add dev $IFB parent $classid fq_codel target 10ms
+done
 
-tc class add dev $IFB parent a2: classid a2:2 qfq weight 10
-tc qdisc add dev $IFB parent a2:2 handle a50: fq_codel target 10ms
-
-tc class add dev $IFB parent a2: classid a2:3 qfq weight 30
-tc qdisc add dev $IFB parent a2:3 handle a60: fq_codel target 10ms
+tc class add dev $IFB parent a2: classid a2:fff qfq weight 10
+tc qdisc add dev $IFB parent a2:fff fq_codel target 10ms
 
 echo "-------------------Start adding filters------------"
 # Add flow hash filter
 tc filter add dev $IFB parent a2: protocol all prio 2 handle 0x2337 \
-   flow hash keys nfct-dst divisor 2 baseclass a2:1
+   flow map key nfct-dst and 0xff divisor 256 baseclass a2:1
 
 tc filter add dev $IFB parent a2: protocol ip prio 1 handle 0x3337 \
-   u32 match ip dst 192.168.41.101 flowid a2:3
+   u32 match ip dst 192.168.41.101 flowid a2:fff
 
 tc -g -s qdisc show dev $IFB
 tc -g -s class show dev $IFB
