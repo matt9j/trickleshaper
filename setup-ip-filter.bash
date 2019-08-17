@@ -72,11 +72,11 @@ for i in `seq 1 256`
 do
 classid=a2:$(printf %x $i)
 tc class add dev $IFB parent a2: classid $classid qfq weight 10
-tc qdisc add dev $IFB parent $classid sfq perturb 30 probability 0.5 redflowlimit 20000 ecn harddrop
+tc qdisc add dev $IFB parent $classid sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 done
 
 tc class add dev $IFB parent a2: classid a2:fff qfq weight 20
-tc qdisc add dev $IFB parent a2:fff sfq perturb 30 probability 0.5 redflowlimit 20000 ecn harddrop
+tc qdisc add dev $IFB parent a2:fff sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 
 echo "-------------------Start adding filters------------"
 # Add flow hash filter
