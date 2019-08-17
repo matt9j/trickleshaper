@@ -17,11 +17,17 @@ tc qdisc add dev $IFACE root handle 1: tbf rate 500kbit burst 30kbit latency 10m
 tc qdisc add dev $IFACE parent 1:1 handle 2: qfq
 
 echo "    ---Add app classes"
+# 2:1 for EF and voice traffic
 tc class add dev $IFACE parent 2: classid 2:1 qfq weight 20
-tc class add dev $IFACE parent 2: classid 2:2 qfq weight 10
-tc class add dev $IFACE parent 2: classid 2:3 qfq weight 5
+# 2:2 for small packets (dangerous since not flow aware, could cause reordering)
+# TODO(matt9j) Use CAKE to target small *flows*
+tc class add dev $IFACE parent 2: classid 2:2 qfq weight 20
+# 2:3 normal best effort traffic
+tc class add dev $IFACE parent 2: classid 2:3 qfq weight 10
+# Bulk
+tc class add dev $IFACE parent 2: classid 2:4 qfq weight 5
 
-for appIndex in `seq 1 3`
+for appIndex in `seq 1 4`
 do
     echo "    ===============Class "$appIndex"==========="
     echo "        ---Use QFQ in each class"
@@ -56,17 +62,15 @@ tc filter add dev $IFACE parent 2: protocol ip prio 10 u32 \
 
 # Prioritize Small packets (<128 bytes payload)
 tc filter add dev $IFACE parent 2: protocol ip prio 12 u32 \
-   match u16 0x0000 0xff80 at 2 \
-   flowid 2:1
+   match u16 0x0000 0xff80 at 2 flowid 2:2
 
 tc filter add dev $IFACE parent 2: protocol ip prio 12 u32 \
-   match u16 0x0000 0xff80 at 4 \
-   flowid 2:1
+   match u16 0x0000 0xff80 at 4 flowid 2:2
 
 # By default send all traffic to the middle band.
 # Large prio ("low priority") ensures other filters take precedence
 # over this default.
-tc filter add dev $IFACE parent 2: prio 1000 matchall flowid 2:2
+tc filter add dev $IFACE parent 2: prio 1000 matchall flowid 2:3
 
 echo ""
 echo "---Start Ingress--"
@@ -92,21 +96,27 @@ tc qdisc add dev $IFB root handle 1: tbf rate 500kbit burst 30kbit latency 10ms
 tc qdisc add dev $IFB parent 1: handle 2: qfq
 
 echo "    ---Add app classes"
+# 2:1 for EF and voice traffic
 tc class add dev $IFB parent 2: classid 2:1 qfq weight 20
-tc class add dev $IFB parent 2: classid 2:2 qfq weight 10
-tc class add dev $IFB parent 2: classid 2:3 qfq weight 5
+# 2:2 for small packets (dangerous since not flow aware, could cause reordering)
+# TODO(matt9j) Use CAKE to target small *flows*
+tc class add dev $IFB parent 2: classid 2:2 qfq weight 20
+# 2:3 normal best effort traffic
+tc class add dev $IFB parent 2: classid 2:3 qfq weight 10
+# Bulk
+tc class add dev $IFB parent 2: classid 2:4 qfq weight 5
 
 echo "    ---Add admin shortcut"
-tc class add dev $IFB parent 2: classid 2:4 qfq weight 20
-tc qdisc add dev $IFB parent 2:4 sfq\
+tc class add dev $IFB parent 2: classid 2:5 qfq weight 30
+tc qdisc add dev $IFB parent 2:5 sfq\
    perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 
 # Add exception filter
 tc filter add dev $IFB parent 2: protocol ip prio 1 handle 0x1337 \
-   u32 match ip dst 192.168.41.101 flowid 2:4
+   u32 match ip dst 192.168.41.101 flowid 2:5
 
 
-for appIndex in `seq 1 3`
+for appIndex in `seq 1 4`
 do
     echo "    ===============Class "$appIndex"==========="
     echo "        ---Use QFQ in each class"
@@ -141,14 +151,12 @@ tc filter add dev $IFB parent 2: protocol ip prio 10 u32 \
 
 # Prioritize Small packets (<128 bytes payload)
 tc filter add dev $IFB parent 2: protocol ip prio 12 u32 \
-   match u16 0x0000 0xff80 at 2 \
-   flowid 2:1
+   match u16 0x0000 0xff80 at 2 flowid 2:2
 
 tc filter add dev $IFB parent 2: protocol ip prio 12 u32 \
-   match u16 0x0000 0xff80 at 4 \
-   flowid 2:1
+   match u16 0x0000 0xff80 at 4 flowid 2:2
 
 # By default send all traffic to the middle band.
 # Large prio ("low priority") ensures other filters take precedence
 # over this default.
-tc filter add dev $IFB parent 2: prio 1000 matchall flowid 2:2
+tc filter add dev $IFB parent 2: prio 1000 matchall flowid 2:3
