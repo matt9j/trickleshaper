@@ -62,7 +62,7 @@ tc filter add dev $IFACE parent ffff: matchall action mirred egress redirect dev
 
 echo "-------------------Start adding qdiscs------------"
 # Add class and top level rules for virtual
-tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 100kbit latency 10ms
+tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 1000kbit latency 10ms
 # The latency parameter does not matter since we overwrite the TBFs
 # internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
 # more information.
@@ -72,11 +72,11 @@ for i in `seq 1 256`
 do
 classid=a2:$(printf %x $i)
 tc class add dev $IFB parent a2: classid $classid qfq weight 10
-tc qdisc add dev $IFB parent $classid sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
+tc qdisc add dev $IFB parent $classid sfq perturb 30 probability 0.5 redflowlimit 2000 ecn harddrop
 done
 
 tc class add dev $IFB parent a2: classid a2:fff qfq weight 20
-tc qdisc add dev $IFB parent a2:fff sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
+tc qdisc add dev $IFB parent a2:fff sfq perturb 30 probability 0.5 redflowlimit 2000 ecn harddrop
 
 echo "-------------------Start adding filters------------"
 # Add flow hash filter
