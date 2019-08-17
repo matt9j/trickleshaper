@@ -21,3 +21,9 @@ always ended up taking over!
 Want to experiment and see that things are still stable at 30k even if
 the community updates to a 30Mb connection.
  - Even with 30Mb/s as the rate, the connection can saturate with 30k burst.
+
+Filtering hierarchy plan:
+- Top level ratelimit
+- Second level immediate split to 3 bands of application priority and de-priority
+- Third level split by user device in each band.
+- Fourth level for each user in each band, SFQ.
