@@ -44,14 +44,29 @@ do
 done
 
 echo "    ---Add app class filters"
+# TODO(matt9j) Identify WA voice and send to top band
+# TODO(matt9j) Identify heavy flows and send to bottom band
+
+# Prioritize DSCP EF
+tc filter add dev $IFACE parent 2: protocol ip prio 10 u32 \
+   match ip dsfield 0xb8 0xfc flowid 2:1
+
+tc filter add dev $IFACE parent 2: protocol ip prio 10 u32 \
+   match ip6 priority 0xb8 0xfc flowid 2:1
+
+# Prioritize Small packets (<128 bytes payload)
+tc filter add dev $IFACE parent 2: protocol ip prio 12 u32 \
+   match u16 0x0000 0xff80 at 2 \
+   flowid 2:1
+
+tc filter add dev $IFACE parent 2: protocol ip prio 12 u32 \
+   match u16 0x0000 0xff80 at 4 \
+   flowid 2:1
+
 # By default send all traffic to the middle band.
 # Large prio ("low priority") ensures other filters take precedence
 # over this default.
 tc filter add dev $IFACE parent 2: prio 1000 matchall flowid 2:2
-
-# TODO(matt9j) Identify small packets and send to top band
-# TODO(matt9j) Identify WA voice and send to top band
-# TODO(matt9j) Identify heavy flows and send to bottom band
 
 echo ""
 echo "---Start Ingress--"
@@ -114,11 +129,26 @@ do
 done
 
 echo "    ---Add app class filters"
+# TODO(matt9j) Identify WA voice and send to top band
+# TODO(matt9j) Identify heavy flows and send to bottom band
+
+# Prioritize DSCP EF
+tc filter add dev $IFB parent 2: protocol ip prio 10 u32 \
+   match ip dsfield 0xb8 0xfc flowid 2:1
+
+tc filter add dev $IFB parent 2: protocol ip prio 10 u32 \
+   match ip6 priority 0xb8 0xfc flowid 2:1
+
+# Prioritize Small packets (<128 bytes payload)
+tc filter add dev $IFB parent 2: protocol ip prio 12 u32 \
+   match u16 0x0000 0xff80 at 2 \
+   flowid 2:1
+
+tc filter add dev $IFB parent 2: protocol ip prio 12 u32 \
+   match u16 0x0000 0xff80 at 4 \
+   flowid 2:1
+
 # By default send all traffic to the middle band.
 # Large prio ("low priority") ensures other filters take precedence
 # over this default.
 tc filter add dev $IFB parent 2: prio 1000 matchall flowid 2:2
-
-# TODO(matt9j) Identify small packets and send to top band
-# TODO(matt9j) Identify WA voice and send to top band
-# TODO(matt9j) Identify heavy flows and send to bottom band
