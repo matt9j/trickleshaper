@@ -14,7 +14,7 @@ tc -g -s filter show dev $IFACE
 
 echo "-------------------Add root----------------"
 
-tc qdisc add dev $IFACE root handle 1: tbf rate 500kbit burst 100kbit latency 10ms
+tc qdisc add dev $IFACE root handle 1: tbf rate 500kbit burst 30kbit latency 10ms
 # The latency parameter does not matter since we overwrite the TBF's
 # internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
 # more information.
