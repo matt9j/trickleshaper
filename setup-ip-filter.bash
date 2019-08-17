@@ -28,7 +28,7 @@ for i in `seq 1 256`
 do
 classid=2:$(printf %x $i)
 tc class add dev $IFACE parent 2: classid $classid qfq weight 10
-tc qdisc add dev $IFACE parent $classid fq_codel target 10ms
+tc qdisc add dev $IFACE parent $classid sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 done
 
 echo "-------------------Add filter--------------"
@@ -39,11 +39,11 @@ tc filter add dev $IFACE parent 2: protocol all prio 1 handle 0x1337 \
    flow map key nfct-src and 0xff divisor 256 baseclass 2:1
 #This is where we maybe want to change to destIP
 
-echo "-------------------Print end state----------------"
+#echo "-------------------Print end state----------------"
 
-tc -g -s qdisc show dev $IFACE
-tc -g -s class show dev $IFACE
-tc -g -s filter show dev $IFACE
+#tc -g -s qdisc show dev $IFACE
+#tc -g -s class show dev $IFACE
+#tc -g -s filter show dev $IFACE
 
 
 echo "-------------------Start ingress magic------------"
@@ -51,9 +51,11 @@ echo "-------------------Start ingress magic------------"
 modprobe ifb numifbs=1
 ip link set dev $IFB up
 
+echo "-------------------Clearing existing ingress------------"
 tc qdisc del dev $IFB ingress
 tc qdisc del dev $IFB root
 
+echo "-------------------Redirect to ifb------------"
 # Redirect ingress (incoming) to egress ifb0
 tc qdisc add dev $IFACE handle ffff: ingress
 tc filter add dev $IFACE parent ffff: matchall action mirred egress redirect dev $IFB
@@ -70,11 +72,11 @@ for i in `seq 1 256`
 do
 classid=a2:$(printf %x $i)
 tc class add dev $IFB parent a2: classid $classid qfq weight 10
-tc qdisc add dev $IFB parent $classid fq_codel target 10ms
+tc qdisc add dev $IFB parent $classid sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 done
 
-tc class add dev $IFB parent a2: classid a2:fff qfq weight 10
-tc qdisc add dev $IFB parent a2:fff fq_codel target 10ms
+tc class add dev $IFB parent a2: classid a2:fff qfq weight 20
+tc qdisc add dev $IFB parent a2:fff sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 
 echo "-------------------Start adding filters------------"
 # Add flow hash filter
@@ -84,6 +86,6 @@ tc filter add dev $IFB parent a2: protocol all prio 2 handle 0x2337 \
 tc filter add dev $IFB parent a2: protocol ip prio 1 handle 0x3337 \
    u32 match ip dst 192.168.41.101 flowid a2:fff
 
-tc -g -s qdisc show dev $IFB
-tc -g -s class show dev $IFB
-tc -g -s filter show dev $IFB
+#tc -g -s qdisc show dev $IFB
+#tc -g -s class show dev $IFB
+#tc -g -s filter show dev $IFB
