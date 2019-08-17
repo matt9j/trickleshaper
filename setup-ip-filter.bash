@@ -62,7 +62,7 @@ tc filter add dev $IFACE parent ffff: matchall action mirred egress redirect dev
 
 echo "-------------------Start adding qdiscs------------"
 # Add class and top level rules for virtual
-tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 1000kbit latency 10ms
+tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 30kbit latency 10ms
 # The latency parameter does not matter since we overwrite the TBFs
 # internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
 # more information.
