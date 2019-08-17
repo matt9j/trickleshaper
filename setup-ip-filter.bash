@@ -3,17 +3,14 @@
 IFACE=eth1
 IFB=ifb0
 
-echo "-------------------Clear that shit----------------"
+echo "------------------"
+echo "---Start Egress---"
+echo "------------------"
+echo "-------------------Clear existing----------------"
 tc qdisc del dev $IFACE root
 tc qdisc del dev $IFACE ingress
 
-echo "-------------------Show it's cleared----------------"
-tc -g -s qdisc show dev $IFACE
-tc -g -s class show dev $IFACE
-tc -g -s filter show dev $IFACE
-
-echo "-------------------Add root----------------"
-
+echo "-------------------Add root ratelimit----------------"
 tc qdisc add dev $IFACE root handle 1: tbf rate 500kbit burst 30kbit latency 10ms
 # The latency parameter does not matter since we overwrite the TBF's
 # internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
@@ -31,22 +28,17 @@ tc class add dev $IFACE parent 2: classid $classid qfq weight 10
 tc qdisc add dev $IFACE parent $classid sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 done
 
-echo "-------------------Add filter--------------"
-#tc filter add dev $IFACE parent 1: matchall flowid 2:
+echo "-------------------Add ip source filter--------------"
 #tc filter add dev $IFACE parent 2: matchall flowid 2:1
 
 tc filter add dev $IFACE parent 2: protocol all prio 1 handle 0x1337 \
    flow map key nfct-src and 0xff divisor 256 baseclass 2:1
-#This is where we maybe want to change to destIP
-
-#echo "-------------------Print end state----------------"
-
-#tc -g -s qdisc show dev $IFACE
-#tc -g -s class show dev $IFACE
-#tc -g -s filter show dev $IFACE
 
 
-echo "-------------------Start ingress magic------------"
+echo "------------------"
+echo "---Start Ingress--"
+echo "------------------"
+echo "-------------------Add IFB------------"
 # Add the IFB interface
 modprobe ifb numifbs=1
 ip link set dev $IFB up
@@ -60,10 +52,9 @@ echo "-------------------Redirect to ifb------------"
 tc qdisc add dev $IFACE handle ffff: ingress
 tc filter add dev $IFACE parent ffff: matchall action mirred egress redirect dev $IFB
 
-echo "-------------------Start adding qdiscs------------"
-# Add class and top level rules for virtual
+echo "-------------------Add qdiscs------------"
 tc qdisc add dev $IFB root handle a1: tbf rate 500kbit burst 30kbit latency 10ms
-# The latency parameter does not matter since we overwrite the TBFs
+# The latency parameter does not matter since we overwrite the TBF's
 # internal qdisc with QFQ, but it is required. See `$man tc-tbf` for
 # more information.
 tc qdisc add dev $IFB parent a1: handle a2: qfq
@@ -78,14 +69,11 @@ done
 tc class add dev $IFB parent a2: classid a2:fff qfq weight 20
 tc qdisc add dev $IFB parent a2:fff sfq perturb 30 headdrop probability 0.5 redflowlimit 20000 ecn harddrop
 
-echo "-------------------Start adding filters------------"
+echo "-------------------Add ip dest filter------------"
 # Add flow hash filter
 tc filter add dev $IFB parent a2: protocol all prio 2 handle 0x2337 \
    flow map key nfct-dst and 0xff divisor 256 baseclass a2:1
 
+# Add exception filter
 tc filter add dev $IFB parent a2: protocol ip prio 1 handle 0x3337 \
    u32 match ip dst 192.168.41.101 flowid a2:fff
-
-#tc -g -s qdisc show dev $IFB
-#tc -g -s class show dev $IFB
-#tc -g -s filter show dev $IFB
