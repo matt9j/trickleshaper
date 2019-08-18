@@ -51,7 +51,6 @@ do
 done
 
 echo "    ---Add app class filters"
-# TODO(matt9j) Identify WA voice and send to top band
 # TODO(matt9j) Identify heavy flows and send to bottom band
 
 # Prioritize DSCP EF
@@ -61,7 +60,17 @@ tc filter add dev $IFACE parent 2: protocol ip prio 10 u32 \
 tc filter add dev $IFACE parent 2: protocol ip prio 10 u32 \
    match ip6 priority 0xb8 0xfc flowid 2:1
 
-# Prioritize Small packets (<128 bytes payload)
+# Prioritize slightly larger UDP packets to support realtime audio streaming
+# This catches WhatsApp and Signal voice at <256 bytes/packet
+tc filter add dev $IFACE parent 2: protocol ip prio 11 u32 \
+   match u16 0x0000 0xff00 at 2 \
+   match ip protocol 0x11 0xff flowid 2:2
+
+tc filter add dev $IFACE parent 2: protocol ip prio 11 u32 \
+   match u16 0x0000 0xff00 at 4 \
+   match ip6 protocol 0x11 0xff flowid 2:2
+
+# Prioritize all small packets (<128 bytes payload)
 tc filter add dev $IFACE parent 2: protocol ip prio 12 u32 \
    match u16 0x0000 0xff80 at 2 flowid 2:2
 
@@ -140,7 +149,6 @@ do
 done
 
 echo "    ---Add app class filters"
-# TODO(matt9j) Identify WA voice and send to top band
 # TODO(matt9j) Identify heavy flows and send to bottom band
 
 # Prioritize DSCP EF
@@ -149,6 +157,16 @@ tc filter add dev $IFB parent 2: protocol ip prio 10 u32 \
 
 tc filter add dev $IFB parent 2: protocol ip prio 10 u32 \
    match ip6 priority 0xb8 0xfc flowid 2:1
+
+# Prioritize slightly larger UDP packets to support realtime audio streaming
+# This catches WhatsApp and Signal voice at <256 bytes/packet
+tc filter add dev $IFB parent 2: protocol ip prio 11 u32 \
+   match u16 0x0000 0xff00 at 2 \
+   match ip protocol 0x11 0xff flowid 2:2
+
+tc filter add dev $IFB parent 2: protocol ip prio 11 u32 \
+   match u16 0x0000 0xff00 at 4 \
+   match ip6 protocol 0x11 0xff flowid 2:2
 
 # Prioritize Small packets (<128 bytes payload)
 tc filter add dev $IFB parent 2: protocol ip prio 12 u32 \
