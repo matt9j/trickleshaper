@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
-IFACE=eth1
+#IFACE=eth1
+IFACE=enx009f9e90079b
 IFB=ifb0
 
 echo "---Start Egress---"
@@ -35,7 +36,7 @@ do
     tc qdisc add dev $IFACE parent 2:$appIndex handle $qdiscHandle: qfq
 
     echo "        ---Add shapers per ip"
-    for i in `seq 1 2`
+    for i in `seq 1 256`
     do
         classid=$qdiscHandle:$(printf %x $i)
         tc class add dev $IFACE parent $qdiscHandle: classid $classid qfq weight 10
@@ -46,7 +47,7 @@ do
     echo "        ---Add ip source filter"
     tc filter add dev $IFACE parent $qdiscHandle: protocol all prio 1\
        handle 0xff$qdiscHandle\
-       flow map key nfct-src and 0xff divisor 2 baseclass $qdiscHandle:1
+       flow map key nfct-src and 0xff divisor 256 baseclass $qdiscHandle:1
 done
 
 echo "    ---Add app class filters"
@@ -113,7 +114,7 @@ tc qdisc add dev $IFB parent 2:5 sfq\
 
 # Add exception filter
 tc filter add dev $IFB parent 2: protocol ip prio 1 handle 0x1337 \
-   u32 match ip dst 192.168.41.101 flowid 2:5
+   u32 match ip dst 192.168.151.183 flowid 2:5
 
 
 for appIndex in `seq 1 4`
@@ -124,7 +125,7 @@ do
     tc qdisc add dev $IFB parent 2:$appIndex handle $qdiscHandle: qfq
 
     echo "        ---Add shapers per ip"
-    for i in `seq 1 2`
+    for i in `seq 1 256`
     do
         classid=$qdiscHandle:$(printf %x $i)
         tc class add dev $IFB parent $qdiscHandle: classid $classid qfq weight 10
@@ -135,7 +136,7 @@ do
     echo "        ---Add ip dest filter"
     tc filter add dev $IFB parent $qdiscHandle: protocol all prio 1\
        handle 0xff$qdiscHandle\
-       flow map key nfct-dst and 0xff divisor 2 baseclass $qdiscHandle:1
+       flow map key nfct-dst and 0xff divisor 256 baseclass $qdiscHandle:1
 done
 
 echo "    ---Add app class filters"

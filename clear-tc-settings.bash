@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
-IFACE=eth1
+#IFACE=eth1
+IFACE=enx009f9e90079b
 IFB=ifb0
 
 tc qdisc del dev $IFB ingress
