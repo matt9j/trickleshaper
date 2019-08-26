@@ -1,0 +1,16 @@
+[Unit]
+Description=Skinnyshaper Traffic Limit
+After=network.target
+Requires=network.target
+
+[Service]
+ExecStart=/sbin/skinnyshaper -a enx009f9e90079b -u 500 -d 400
+ExecStop=/sbin/skinnyshaper -c -a enx009f9e90079b
+User=root
+Group=root
+Type=oneshot
+RemainAfterExit=yes
+Environment=PATH=/usr/bin:/usr/local/bin:/bin:/sbin
+
+[Install]
+WantedBy=multi-user.target
