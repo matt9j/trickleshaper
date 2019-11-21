@@ -44,14 +44,14 @@ OPTIONS:
    -v           Show the current version
 
 MODES:
-   skinnyshaper -a <adapter> -d <rate> -u <rate>
-   skinnyshaper -c -a <adapter>
-   skinnyshaper -s -a <adapter>
+   trickleshaper -a <adapter> -d <rate> -u <rate>
+   trickleshaper -c -a <adapter>
+   trickleshaper -s -a <adapter>
 
 EXAMPLES:
-   skinnyshaper -a eth0 -d 1024 -u 512
-   skinnyshaper -a eth0 -u 512
-   skinnyshaper -c -a eth0
+   trickleshaper -a eth0 -d 1024 -u 512
+   trickleshaper -a eth0 -u 512
+   trickleshaper -c -a eth0
 
 EOF
 }

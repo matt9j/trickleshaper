@@ -1,11 +1,11 @@
 [Unit]
-Description=Skinnyshaper Traffic Limit
+Description=Trickleshaper Traffic Limit
 After=network.target
 Requires=network.target
 
 [Service]
-ExecStart=/sbin/skinnyshaper -a enx009f9e90079b -u 500 -d 400
-ExecStop=/sbin/skinnyshaper -c -a enx009f9e90079b
+ExecStart=/sbin/trickleshaper -a enx009f9e90079b -u 500 -d 400
+ExecStop=/sbin/trickleshaper -c -a enx009f9e90079b
 User=root
 Group=root
 Type=oneshot
